@@ -30,6 +30,7 @@ import clearSVG from '@plone/volto/icons/clear.svg';
 import navTreeSVG from '@plone/volto/icons/nav.svg';
 import aheadSVG from '@plone/volto/icons/ahead.svg';
 import uploadSVG from '@plone/volto/icons/upload.svg';
+import describeImage from "./visionDescription.js";
 
 const Dropzone = loadable(() => import('react-dropzone'));
 
@@ -80,7 +81,15 @@ class Edit extends Component {
     uploading: false,
     url: '',
     dragging: false,
+    description:'',
+    title:''
   };
+
+  
+
+
+
+
 
   /**
    * Component will receive props
@@ -120,6 +129,7 @@ class Edit extends Component {
       !isEqual(this.props.data, nextProps.data)
     );
   }
+  
 
   /**
    * Upload image handler (not used), but useful in case that we want a button
@@ -129,13 +139,29 @@ class Edit extends Component {
    */
   onUploadImage = (e) => {
     e.stopPropagation();
+
+    
+
     const file = e.target.files[0];
     if (!validateFileUploadSize(file, this.props.intl.formatMessage)) return;
     this.setState({
       uploading: true,
     });
-    readAsDataURL(file).then((data) => {
+    const describer = new  describeImage()
+
+    
+    
+     readAsDataURL(file).then(async (data) => {
       const fields = data.match(/^data:(.*);(.*),(.*)$/);
+
+      const {description,title} = await describer.processImage(fields[3]);
+      
+      
+      this.setState({ description: description, title : title}); 
+     
+  
+  
+
       this.props.createContent(
         getBaseUrl(this.props.pathname),
         {
@@ -151,8 +177,9 @@ class Edit extends Component {
         this.props.block,
       );
     });
+    
   };
-
+  
   /**
    * Change url handler
    * @method onChangeUrl
@@ -251,6 +278,8 @@ class Edit extends Component {
     const placeholder =
       this.props.data.placeholder ||
       this.props.intl.formatMessage(messages.ImageBlockInputPlaceholder);
+    const {description, title}=this.state
+    
 
     return (
       <div
@@ -262,6 +291,9 @@ class Edit extends Component {
           data.align,
         )}
       >
+        {title && <h2>{title}</h2>}
+        {description && <p> {description}</p>}
+        
         {data.url ? (
           <Image
             className={cx({
@@ -283,19 +315,19 @@ class Edit extends Component {
               data.image_scales
                 ? undefined
                 : isInternalURL(data.url)
-                  ? // Backwards compat in the case that the block is storing the full server URL
-                    (() => {
-                      if (data.size === 'l')
-                        return `${flattenToAppURL(data.url)}/@@images/image`;
-                      if (data.size === 'm')
-                        return `${flattenToAppURL(
-                          data.url,
-                        )}/@@images/image/preview`;
-                      if (data.size === 's')
-                        return `${flattenToAppURL(data.url)}/@@images/image/mini`;
+                ? // Backwards compat in the case that the block is storing the full server URL
+                  (() => {
+                    if (data.size === 'l')
                       return `${flattenToAppURL(data.url)}/@@images/image`;
-                    })()
-                  : data.url
+                    if (data.size === 'm')
+                      return `${flattenToAppURL(
+                        data.url,
+                      )}/@@images/image/preview`;
+                    if (data.size === 's')
+                      return `${flattenToAppURL(data.url)}/@@images/image/mini`;
+                    return `${flattenToAppURL(data.url)}/@@images/image`;
+                  })()
+                : data.url
             }
             sizes={config.blocks.blocksConfig.image.getSizes(data)}
             alt={data.alt || ''}
